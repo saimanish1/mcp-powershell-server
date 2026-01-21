@@ -2,6 +2,12 @@
 
 A memory-optimized MCP server for executing PowerShell commands on Windows.
 
+## Why This Exists
+
+This server was created to solve a common Windows development issue: many AI coding assistants (like Claude Code) attempt to execute PowerShell commands through Bash on Windows, which fails because Bash doesn't understand PowerShell syntax. This server provides direct PowerShell execution with proper quoting, path handling, and memory optimization.
+
+Instead of fighting with Bash translation layers or constantly reminding the AI to use `cmd.exe`, this MCP server gives AI assistants direct, reliable access to PowerShell with all the Windows-specific features they need.
+
 ## Features
 
 - PowerShell-only execution with -EncodedCommand for robust quoting
