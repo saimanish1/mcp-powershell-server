@@ -1,0 +1,17 @@
+{
+  "name": "mcp-shell-server",
+  "version": "1.0.0",
+  "description": "Standalone MCP server for running shell commands",
+  "type": "module",
+  "main": "mcp-shell-server.mjs",
+  "scripts": {
+    "start": "node mcp-shell-server.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
