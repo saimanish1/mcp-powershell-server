@@ -1,4 +1,4 @@
-# MCP Shell Server
+# MCP PowerShell Server
 
 A memory-optimized MCP server for executing PowerShell commands on Windows.
 
@@ -31,7 +31,7 @@ Add to your MCP client configuration (e.g., Gemini CLI settings.json):
 ```json
 {
   "mcpServers": {
-    "mcp-shell-server": {
+    "mcp-powershell-server": {
       "command": "node",
       "args": ["path/to/mcp-shell-server/mcp-shell-server.mjs"],
       "env": {
