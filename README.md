@@ -1,6 +1,6 @@
 # MCP PowerShell Server
 
-A memory-optimized MCP server for executing PowerShell commands on Windows.
+A memory-optimized MCP server for executing PowerShell commands on Windows, macOS, and Linux.
 
 ## Why This Exists
 
@@ -13,9 +13,9 @@ Instead of fighting with Bash translation layers or constantly reminding the AI 
 - PowerShell-only execution with -EncodedCommand for robust quoting
 - Memory optimized with 64KB default output limit, 2MB maximum
 - Buffer-based output handling to prevent memory leaks
-- Process tree killing with taskkill /t /f
+- Cross-platform process tree killing (taskkill on Windows, SIGKILL on POSIX)
 - Timeout protection (default 60 seconds, max 10 minutes)
-- Cross-platform MCP client compatibility
+- Cross-platform MCP client compatibility (Windows, macOS, Linux)
 
 ## Installation
 
@@ -120,8 +120,9 @@ Execute PowerShell commands with memory and timeout protection.
 ## Requirements
 
 - Node.js 18+
-- Windows OS
-- PowerShell (pwsh.exe recommended)
+- PowerShell (`pwsh` recommended, `powershell.exe` on Windows as fallback)
+  - Windows: built-in `powershell.exe` works; install [PowerShell 7+](https://github.com/PowerShell/PowerShell) for `pwsh`
+  - macOS/Linux: install [PowerShell 7+](https://github.com/PowerShell/PowerShell)
 
 ## License
 

@@ -6,18 +6,31 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 
-function hasCommandOnWindows(cmd) {
-  const r = spawnSync('where', [cmd], { stdio: 'ignore', shell: false, windowsHide: true });
+function hasCommand(cmd) {
+  const isWindows = os.platform() === 'win32';
+  const r = spawnSync(isWindows ? 'where' : 'which', [cmd], {
+    stdio: 'ignore',
+    shell: false,
+    ...(isWindows && { windowsHide: true }),
+  });
   return r.status === 0;
 }
 
 function getShellConfiguration() {
-  if (os.platform() !== 'win32') {
-    throw new Error('This server is PowerShell-only. Run it on Windows.');
-  }
-
+  const isWindows = os.platform() === 'win32';
   const override = process.env['MCP_SHELL_EXE']?.trim();
-  const executable = override || (hasCommandOnWindows('pwsh') ? 'pwsh.exe' : 'powershell.exe');
+
+  let executable;
+  if (override) {
+    executable = override;
+  } else if (isWindows) {
+    executable = hasCommand('pwsh') ? 'pwsh.exe' : 'powershell.exe';
+  } else {
+    if (!hasCommand('pwsh')) {
+      throw new Error('PowerShell (pwsh) not found. Install it from https://github.com/PowerShell/PowerShell');
+    }
+    executable = 'pwsh';
+  }
 
   return {
     executable,
@@ -29,19 +42,28 @@ function encodePowerShellCommand(command) {
   return Buffer.from(command, 'utf16le').toString('base64');
 }
 
-async function taskkillTree(pid) {
-  await new Promise((resolve) => {
-    const killer = spawn('taskkill', ['/pid', String(pid), '/t', '/f'], {
-      stdio: 'ignore',
-      shell: false,
-      windowsHide: true,
+async function killProcessTree(pid) {
+  if (os.platform() === 'win32') {
+    await new Promise((resolve) => {
+      const killer = spawn('taskkill', ['/pid', String(pid), '/t', '/f'], {
+        stdio: 'ignore',
+        shell: false,
+        windowsHide: true,
+      });
+      killer.on('close', () => resolve());
+      killer.on('error', () => resolve());
     });
-    killer.on('close', () => resolve());
-    killer.on('error', () => resolve());
-  });
+  } else {
+    try {
+      process.kill(-pid, 'SIGKILL');
+    } catch {
+      try { process.kill(pid, 'SIGKILL'); } catch { /* already gone */ }
+    }
+  }
 }
 
 function spawnWithOutputLimit({ shell, command, cwd, maxBytes }) {
+  const isWindows = os.platform() === 'win32';
   const child = spawn(
     shell.executable,
     [...shell.argsPrefix, encodePowerShellCommand(command)],
@@ -49,7 +71,7 @@ function spawnWithOutputLimit({ shell, command, cwd, maxBytes }) {
       cwd,
       stdio: ['ignore', 'pipe', 'pipe'],
       shell: false,
-      windowsHide: true,
+      ...(isWindows ? { windowsHide: true } : { detached: true }),
       env: {
         ...process.env,
         TERM: 'xterm-256color',
@@ -120,7 +142,7 @@ async function waitForExit(child, cleanup, timeoutMs) {
 
     const t = setTimeout(async () => {
       timedOut = true;
-      if (child.pid) await taskkillTree(child.pid);
+      if (child.pid) await killProcessTree(child.pid);
       resolveOnce({ code: null, signal: 'SIGTERM' });
     }, timeoutMs);
 
@@ -144,7 +166,7 @@ server.registerTool(
   'run_shell_command',
   {
     description:
-      'Execute commands using PowerShell on Windows (PowerShell-only). Returns stdout, stderr, exit code, signal, and flags for timeout/truncation.',
+      'Execute commands using PowerShell (pwsh). Returns stdout, stderr, exit code, signal, and flags for timeout/truncation.',
     inputSchema: z
       .object({
         command: z.string().min(1).describe('PowerShell command/script to execute'),
@@ -170,7 +192,7 @@ server.registerTool(
     const { exit, timedOut } = await waitForExit(child, cleanup, timeout);
 
     if (isTruncated() && child.pid) {
-      await taskkillTree(child.pid);
+      await killProcessTree(child.pid);
     }
 
     const response = {
